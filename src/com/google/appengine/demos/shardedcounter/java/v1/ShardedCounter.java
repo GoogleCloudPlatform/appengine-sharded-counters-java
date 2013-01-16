@@ -34,54 +34,57 @@ import java.util.Random;
  */
 public class ShardedCounter {
 
-  private static final DatastoreService ds = DatastoreServiceFactory
-      .getDatastoreService();
+    /**
+     * DatastoreService object for Datastore access.
+     */
+    private static final DatastoreService DS = DatastoreServiceFactory
+        .getDatastoreService();
 
-  /**
-   * Default number of shards.
-   */
-  private static final int NUM_SHARDS = 20;
+    /**
+     * Default number of shards.
+     */
+    private static final int NUM_SHARDS = 20;
 
-  /**
-   * A random number generator, for distributing writes across shards.
-   */
-  private final Random generator = new Random();
+    /**
+     * A random number generator, for distributing writes across shards.
+     */
+    private final Random generator = new Random();
 
-  /**
-   * Retrieve the value of this sharded counter.
-   * 
-   * @return Summed total of all shards' counts
-   */
-  public long getCount() {
-    long sum = 0;
+    /**
+     * Retrieve the value of this sharded counter.
+     *
+     * @return Summed total of all shards' counts
+     */
+    public final long getCount() {
+        long sum = 0;
 
-    Query query = new Query("SimpleCounterShard");
-    for (Entity e : ds.prepare(query).asIterable()) {
-      sum += (Long) e.getProperty("count");
+        Query query = new Query("SimpleCounterShard");
+        for (Entity e : DS.prepare(query).asIterable()) {
+            sum += (Long) e.getProperty("count");
+        }
+
+        return sum;
     }
 
-    return sum;
-  }
+    /**
+     * Increment the value of this sharded counter.
+     */
+    public final void increment() {
+        int shardNum = generator.nextInt(NUM_SHARDS);
+        Key shardKey = KeyFactory.createKey("SimpleCounterShard",
+                Integer.toString(shardNum));
 
-  /**
-   * Increment the value of this sharded counter.
-   */
-  public void increment() {
-    int shardNum = generator.nextInt(NUM_SHARDS);
-    Key shardKey = KeyFactory.createKey("SimpleCounterShard",
-        Integer.toString(shardNum));
-
-    Transaction tx = ds.beginTransaction();
-    Entity shard;
-    try {
-      shard = ds.get(tx, shardKey);
-      long count = (Long) shard.getProperty("count");
-      shard.setUnindexedProperty("count", count + 1L);
-    } catch (EntityNotFoundException e) {
-      shard = new Entity(shardKey);
-      shard.setUnindexedProperty("count", 1L);
+        Transaction tx = DS.beginTransaction();
+        Entity shard;
+        try {
+            shard = DS.get(tx, shardKey);
+            long count = (Long) shard.getProperty("count");
+            shard.setUnindexedProperty("count", count + 1L);
+        } catch (EntityNotFoundException e) {
+            shard = new Entity(shardKey);
+            shard.setUnindexedProperty("count", 1L);
+        }
+        DS.put(tx, shard);
+        tx.commit();
     }
-    ds.put(tx, shard);
-    tx.commit();
-  }
 }

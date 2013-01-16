@@ -21,22 +21,25 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+/**
+ * A servlet for incrementing the count with a simple sharded counter.
+ */
 @SuppressWarnings("serial")
 public class V1Servlet extends HttpServlet {
-  @Override
-  public void doGet(HttpServletRequest req, HttpServletResponse resp)
-      throws IOException {
-    resp.setContentType("text/plain");
+    @Override
+    public final void doGet(final HttpServletRequest req,
+            final HttpServletResponse resp) throws IOException {
+        resp.setContentType("text/plain");
 
-    String action = req.getParameter("action");
+        String action = req.getParameter("action");
 
-    ShardedCounter counter = new ShardedCounter();
+        ShardedCounter counter = new ShardedCounter();
 
-    if ("increment".equals(action)) {
-      counter.increment();
-      resp.getWriter().println("Counter incremented.");
-    } else {
-      resp.getWriter().println("getCount() -> " + counter.getCount());
+        if ("increment".equals(action)) {
+            counter.increment();
+            resp.getWriter().println("Counter incremented.");
+        } else {
+            resp.getWriter().println("getCount() -> " + counter.getCount());
+        }
     }
-  }
 }
