@@ -24,7 +24,10 @@ import com.google.appengine.api.datastore.KeyFactory;
 import com.google.appengine.api.datastore.Query;
 import com.google.appengine.api.datastore.Transaction;
 
+import java.util.ConcurrentModificationException;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * This initial implementation simply counts all instances of the
@@ -38,7 +41,7 @@ public class ShardedCounter {
      * DatastoreService object for Datastore access.
      */
     private static final DatastoreService DS = DatastoreServiceFactory
-        .getDatastoreService();
+            .getDatastoreService();
 
     /**
      * Default number of shards.
@@ -49,6 +52,12 @@ public class ShardedCounter {
      * A random number generator, for distributing writes across shards.
      */
     private final Random generator = new Random();
+
+    /**
+     * A logger object.
+     */
+    private static final Logger LOG = Logger.getLogger(ShardedCounter.class
+            .getName());
 
     /**
      * Retrieve the value of this sharded counter.
@@ -77,14 +86,26 @@ public class ShardedCounter {
         Transaction tx = DS.beginTransaction();
         Entity shard;
         try {
-            shard = DS.get(tx, shardKey);
-            long count = (Long) shard.getProperty("count");
-            shard.setUnindexedProperty("count", count + 1L);
-        } catch (EntityNotFoundException e) {
-            shard = new Entity(shardKey);
-            shard.setUnindexedProperty("count", 1L);
+            try {
+                shard = DS.get(tx, shardKey);
+                long count = (Long) shard.getProperty("count");
+                shard.setUnindexedProperty("count", count + 1L);
+            } catch (EntityNotFoundException e) {
+                shard = new Entity(shardKey);
+                shard.setUnindexedProperty("count", 1L);
+            }
+            DS.put(tx, shard);
+            tx.commit();
+        } catch (ConcurrentModificationException e) {
+            LOG.log(Level.WARNING,
+                    "You may need more shards. Consider adding more shards.");
+            LOG.log(Level.WARNING, e.toString(), e);
+        } catch (Exception e) {
+            LOG.log(Level.WARNING, e.toString(), e);
+        } finally {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
         }
-        DS.put(tx, shard);
-        tx.commit();
     }
 }

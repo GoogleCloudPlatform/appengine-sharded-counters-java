@@ -2,9 +2,9 @@
 
 A simple application that demonstrates two approaches to sharding counters.
 
-To achieve higher throughput across different instances, counters can be
-sharded to avoid concurrency issues. This application performs this in
-two different ways:
+To achieve higher throughput across different instances, counters should be
+sharded to avoid concurrency issues. This application performs this in two
+different ways:
 
 - Simple Sharding: Uses a constant to define the number of shards and randomly
   picks an index up to this number when incrementing the counter. Each shard is

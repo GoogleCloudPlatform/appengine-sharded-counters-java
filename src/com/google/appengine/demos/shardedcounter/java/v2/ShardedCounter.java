@@ -28,7 +28,10 @@ import com.google.appengine.api.memcache.MemcacheService;
 import com.google.appengine.api.memcache.MemcacheService.SetPolicy;
 import com.google.appengine.api.memcache.MemcacheServiceFactory;
 
+import java.util.ConcurrentModificationException;
 import java.util.Random;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A counter which can be incremented rapidly.
@@ -112,6 +115,12 @@ public class ShardedCounter {
      */
     private final MemcacheService mc = MemcacheServiceFactory
             .getMemcacheService();
+
+    /**
+     * A logger object.
+     */
+    private static final Logger LOG = Logger.getLogger(ShardedCounter.class
+            .getName());
 
     /**
      * Constructor which creates a sharded counter using the provided counter
@@ -211,14 +220,26 @@ public class ShardedCounter {
         Entity thing;
         long value;
         try {
-            thing = DS.get(tx, key);
-            value = (Long) thing.getProperty(prop) + increment;
-        } catch (EntityNotFoundException e) {
-            thing = new Entity(key);
-            value = initialValue;
+            try {
+                thing = DS.get(tx, key);
+                value = (Long) thing.getProperty(prop) + increment;
+            } catch (EntityNotFoundException e) {
+                thing = new Entity(key);
+                value = initialValue;
+            }
+            thing.setUnindexedProperty(prop, value);
+            DS.put(tx, thing);
+            tx.commit();
+        } catch (ConcurrentModificationException e) {
+            LOG.log(Level.WARNING,
+                    "You may need more shards. Consider adding more shards.");
+            LOG.log(Level.WARNING, e.toString(), e);
+        } catch (Exception e) {
+            LOG.log(Level.WARNING, e.toString(), e);
+        } finally {
+            if (tx.isActive()) {
+                tx.rollback();
+            }
         }
-        thing.setUnindexedProperty(prop, value);
-        DS.put(tx, thing);
-        tx.commit();
     }
 }
