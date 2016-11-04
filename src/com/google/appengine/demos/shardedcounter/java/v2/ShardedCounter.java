@@ -96,7 +96,7 @@ public class ShardedCounter {
      * need many shards incase the problem of splitting occurs, so we don't have
      * many dublicates
      */
-    private static final int ATMOST_SHARDS = 15;
+    private static final int MAX_SHARDS = 15;
     
     /**
      * Cache duration for memcache.
@@ -243,7 +243,7 @@ public class ShardedCounter {
                     "You may need more shards. Consider adding more shards.");
             LOG.log(Level.WARNING, e.toString(), e);
             
-            if(getShardCount() <= ATMOST_SHARDS){
+            if(getShardCount() <= MAX_SHARDS){
                 LOG.log(Level.INFO,
                        "Doubling Shade, for this process");
                 addShards(getShardCount()); //double the shade by adding the number of shade again
