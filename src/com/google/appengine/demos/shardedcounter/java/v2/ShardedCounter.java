@@ -90,6 +90,14 @@ public class ShardedCounter {
      */
     private static final int INITIAL_SHARDS = 5;
 
+     /**
+     * this holds the possible number of shards that can be created dynamically
+     * and then stop , since our dataset total is around 500 per second, we don't 
+     * need many shards incase the problem of splitting occurs, so we don't have
+     * many dublicates
+     */
+    private static final int MAX_SHARDS = 15;
+    
     /**
      * Cache duration for memcache.
      */
@@ -234,6 +242,13 @@ public class ShardedCounter {
             LOG.log(Level.WARNING,
                     "You may need more shards. Consider adding more shards.");
             LOG.log(Level.WARNING, e.toString(), e);
+            
+            if(getShardCount() <= MAX_SHARDS){
+                LOG.log(Level.INFO,
+                       "Doubling Shade, for this process");
+                addShards(getShardCount()); //double the shade by adding the number of shade again
+            }
+            
         } catch (Exception e) {
             LOG.log(Level.WARNING, e.toString(), e);
         } finally {
